@@ -177,10 +177,9 @@ function LocationCard({ loc, selected, onClick }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
         <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 14, color: PALETTE.text, marginBottom: 2, lineHeight: 1.3 }}>{loc.name}</div>
-          <div style={{ fontFamily: "sans-serif", fontSize: 10, color: PALETTE.subtle }}>{loc.type}</div>
+          <div style={{ fontFamily: "sans-serif", fontSize: 10, color: PALETTE.subtle }}>{loc.address}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
-          <div style={{ fontFamily: "sans-serif", fontSize: 11, color: PALETTE.clay, fontWeight: 600 }}>★ {loc.rating}</div>
           <div style={{ fontFamily: "sans-serif", fontSize: 10, color: PALETTE.subtle }}>{loc.price}</div>
         </div>
       </div>
@@ -188,7 +187,7 @@ function LocationCard({ loc, selected, onClick }) {
         {loc.description}
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {loc.tags.slice(0, 3).map(t => <Tag key={t} label={t} />)}
+        {loc.moods.slice(0,2).map(m => { const mood = MOODS.find(x => x.id === m); return mood ? <Tag key={m} label={mood.emoji + " " + mood.label} bg={PALETTE.clayLight} color={PALETTE.clay} /> : null; })}
         {cat && <Tag label={cat.label} bg={loc.color + "22"} color={loc.color} />}
       </div>
     </div>
@@ -476,7 +475,6 @@ export default function App() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <div style={{ fontFamily: "sans-serif", fontSize: 11, color: PALETTE.clay, fontWeight: 600 }}>★ {selectedLocData.rating}</div>
                   <div style={{ fontFamily: "sans-serif", fontSize: 11, color: PALETTE.subtle }}>{selectedLocData.price}</div>
                   <button onClick={() => setSelectedLoc(null)} style={{
                     background: PALETTE.surface, border: `1px solid ${PALETTE.border}`,
@@ -496,7 +494,7 @@ export default function App() {
                 })}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                {selectedLocData.tags.map(t => <Tag key={t} label={t} />)}
+                {selectedLocData.vibes.map(v => { const vibe = VIBES.find(x => x.id === v); return vibe ? <Tag key={v} label={vibe.emoji + " " + vibe.label} /> : null; })}
               </div>
             </div>
           ) : (
