@@ -53,13 +53,22 @@ function parseRecord(r, i) {
 }
 
 async function fetchLocations() {
-  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=200`;
-  const res  = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` } });
-  if (!res.ok) throw new Error(`Airtable ${res.status}`);
-  const data = await res.json();
-  // If Airtable returns records, use them — otherwise fall back to hardcoded data
-  if (!data.records || data.records.length === 0) return FALLBACK_LOCATIONS;
-  return data.records.map(parseRecord);
+  try {
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=200`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return FALLBACK_LOCATIONS;
+    const data = await res.json();
+    if (!data.records || data.records.length === 0) return FALLBACK_LOCATIONS;
+    return data.records.map(parseRecord);
+  } catch (e) {
+    return FALLBACK_LOCATIONS;
+  }
 }
 
 const PALETTE = {
