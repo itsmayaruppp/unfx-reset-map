@@ -1,11 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 
-// ─── Airtable config ──────────────────────────────────────────────────────────
-const AIRTABLE_TOKEN   = "patCNeFtCZwEr5CFG.c1a69a42b3f5ab88c5eacc93ec886e654b2b83920a2413104b876b9b0ab977a6";
-const AIRTABLE_BASE_ID = "appkITT5RMqzvvJ37";
-const AIRTABLE_TABLE   = "Locations";
-
-// ─── Fallback data (always works, even before Airtable is populated) ──────────
+// ─── Location data ───────────────────────────────────────────────────────────
 const FALLBACK_LOCATIONS = [
   { id:"f1",  name:"Ritual Urban Retreat",           address:"689 Denman St",           lat:49.2923, lng:-123.1344, category:"studio",     description:"Full-spectrum wellness studio — yoga, pilates, sound baths, breathwork, sauna & cold plunge.",                                    price:"$$",  city:"Vancouver",          hours:"Mon–Sun 6:45am–9pm",  moods:["wired","anxious","overstimulated"], archetypes:["cortisol","disconnector"],         vibes:["slow","solo","grounding"],    color:"#7A1A5A" },
   { id:"f2",  name:"The Good Sauna",                 address:"1216 Franklin St",         lat:49.2822, lng:-123.0784, category:"sauna",      description:"Wood-fired sauna + 3 cold plunge pools. No wellness fluff — just heat, cold, and real people.",                                  price:"$$",  city:"Vancouver",          hours:"Tue–Sun 4pm–late",    moods:["wired","flat","overstimulated"],    archetypes:["cortisol","optimizer"],           vibes:["social","grounding","sensory"],color:"#5080C0" },
@@ -32,44 +27,6 @@ const FALLBACK_LOCATIONS = [
   { id:"f23", name:"Sense, A Rosewood Spa",          address:"801 W Georgia St",         lat:49.2836, lng:-123.1187, category:"luxury",     description:"Luxury spa inside Hotel Georgia. Refined treatment menu focused on restoration and deep relaxation.",                           price:"$$$", city:"Vancouver",          hours:"Daily 10am–8pm",      moods:["depleted","flat","isolated"],       archetypes:["emotionalcarrier","disconnector"],vibes:["deep","warm","solo"],       color:"#C04880" },
   { id:"f24", name:"WEWELL Studios",                 address:"662 Leg in Boot Square",   lat:49.2673, lng:-123.1191, category:"longevity",  description:"Functional wellness studio with longevity protocols, red light therapy and breathwork integration.",                            price:"$$",  city:"Vancouver",          hours:"Mon–Fri 7am–7pm",     moods:["stuck","flat","depleted"],          archetypes:["optimizer","disconnector"],       vibes:["solo","deep","grounding"],   color:"#6EC800" },
 ];
-
-function parseRecord(r, i) {
-  return {
-    id:          r.id || String(i),
-    name:        r.fields.name        || "",
-    address:     r.fields.address     || "",
-    lat:         parseFloat(r.fields.lat)  || 0,
-    lng:         parseFloat(r.fields.lng)  || 0,
-    category:    r.fields.category    || "studio",
-    description: r.fields.description || "",
-    price:       r.fields.price       || "$",
-    city:        r.fields.city        || "Vancouver",
-    hours:       r.fields.hours       || "",
-    moods:       (r.fields.moods      || "").split(";").map(s => s.trim()).filter(Boolean),
-    archetypes:  (r.fields.archetypes || "").split(";").map(s => s.trim()).filter(Boolean),
-    vibes:       (r.fields.vibes      || "").split(";").map(s => s.trim()).filter(Boolean),
-    color:       r.fields.color       || "#7A1A5A",
-  };
-}
-
-async function fetchLocations() {
-  try {
-    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=200`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!res.ok) return FALLBACK_LOCATIONS;
-    const data = await res.json();
-    if (!data.records || data.records.length === 0) return FALLBACK_LOCATIONS;
-    return data.records.map(parseRecord);
-  } catch (e) {
-    return FALLBACK_LOCATIONS;
-  }
-}
 
 const PALETTE = {
   bg:          "#F8F2FF",   // warm lavender-cream — main background
@@ -233,9 +190,7 @@ function MapDot({ loc, selected, onClick }) {
 }
 
 export default function App() {
-  const [locations, setLocations]           = useState([]);
-  const [loading, setLoading]               = useState(true);
-  const [error, setError]                   = useState(null);
+  const [locations] = useState(FALLBACK_LOCATIONS);
   const [selectedMoods, setSelectedMoods]   = useState([]);
   const [selectedArchetypes, setSelectedArchetypes] = useState([]);
   const [selectedVibes, setSelectedVibes]   = useState([]);
@@ -243,35 +198,6 @@ export default function App() {
   const [selectedCity, setSelectedCity]     = useState("All Cities");
   const [selectedLoc, setSelectedLoc]       = useState(null);
   const [activeSection, setActiveSection]   = useState("category");
-
-  useEffect(() => {
-    fetchLocations()
-      .then(data => { setLocations(data); setLoading(false); })
-      .catch(() => { setLocations(FALLBACK_LOCATIONS); setLoading(false); });
-  }, []);
-
-  if (loading) return (
-    <div style={{ minHeight:"100vh", background:"#F8F2FF", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
-      <div style={{ width:48, height:48, border:"3px solid #E0CFF0", borderTop:"3px solid #7A1A5A", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-      <div style={{ fontFamily:"Georgia,serif", fontSize:15, color:"#7A1A5A" }}>Loading reset spots…</div>
-      <div style={{ fontFamily:"sans-serif", fontSize:11, color:"#B090C8" }}>Fetching from Airtable</div>
-    </div>
-  );
-
-  if (error) return (
-    <div style={{ minHeight:"100vh", background:"#F8F2FF", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, padding:40 }}>
-      <div style={{ fontSize:32 }}>⚠️</div>
-      <div style={{ fontFamily:"Georgia,serif", fontSize:16, color:"#7A1A5A", textAlign:"center" }}>Couldn't load locations</div>
-      <div style={{ fontFamily:"sans-serif", fontSize:12, color:"#B090C8", textAlign:"center", maxWidth:360 }}>{error}</div>
-      <div style={{ fontFamily:"sans-serif", fontSize:11, color:"#B090C8", textAlign:"center", maxWidth:400 }}>
-        Make sure your Airtable base has a table named <strong>Locations</strong> and your token has <strong>data.records:read</strong> scope.
-      </div>
-      <button onClick={() => window.location.reload()} style={{ marginTop:8, padding:"8px 20px", background:"#7A1A5A", color:"white", border:"none", borderRadius:6, fontFamily:"sans-serif", fontSize:13, cursor:"pointer" }}>
-        Retry
-      </button>
-    </div>
-  );
 
   const toggle = (arr, setArr, id) =>
     setArr(arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id]);
